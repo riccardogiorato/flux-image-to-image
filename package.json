@@ -6,7 +6,8 @@
   "scripts": {
     "test": "bun run src/index.ts \"black-forest-labs/FLUX.1-dev\"",
     "flux1": "bun run src/index.ts \"black-forest-labs/FLUX.1-dev\"",
-    "flux2": "bun run src/index.ts \"black-forest-labs/FLUX.2-flex\""
+    "flux2": "bun run src/index.ts \"black-forest-labs/FLUX.2-flex\"",
+    "batch": "bun run src/index.ts batch"
   },
   "devDependencies": {
     "@types/bun": "latest"

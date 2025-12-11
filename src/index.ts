@@ -42,44 +42,118 @@ async function generateImageToImage(model: string): Promise<string> {
   }
 }
 
-// CLI mode - direct command execution
-const model = process.argv[2] || "black-forest-labs/FLUX.1-dev";
+// FLUX models that support image-to-image
+const SUPPORTED_MODELS = [
+  "black-forest-labs/FLUX.1-kontext-dev",
+  "black-forest-labs/FLUX.1-kontext-pro",
+  "black-forest-labs/FLUX.1-kontext-max",
+  "black-forest-labs/FLUX.2-pro",
+  "black-forest-labs/FLUX.2-flex"
+];
 
-if (model === "--help" || model === "-h") {
-  console.log("Usage: bun run src/index.ts [model]");
+async function runBatch(models: string[]) {
+  console.log(`🚀 Starting batch processing of ${models.length} FLUX models...`);
+  console.log(`Input image: ${INPUT_IMAGE_URL}`);
   console.log("");
-  console.log("Example: bun run src/index.ts black-forest-labs/FLUX.1-dev");
+
+  const results = [];
+
+  for (const model of models) {
+    try {
+      console.log(`🔄 Processing ${model}...`);
+      const result = await generateImageToImage(model);
+      const outputFilename = `${slugifyModelName(model)}_transformed.jpg`;
+
+      // Extract base64 data and save as file
+      const parts = result.split(",");
+      if (parts.length !== 2 || !parts[1]) {
+        throw new Error("Invalid image data format");
+      }
+      const base64Data = parts[1];
+      const outputBuffer = Buffer.from(base64Data, "base64");
+      writeFileSync(outputFilename, outputBuffer);
+
+      results.push({ model, success: true, filename: outputFilename });
+      console.log(`✅ ${model} → ${outputFilename}`);
+    } catch (error) {
+      console.log(`❌ ${model} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      results.push({ model, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+    console.log("");
+  }
+
+  console.log("📊 Batch processing complete!");
+  console.log(`Successful: ${results.filter(r => r.success).length}/${models.length}`);
+
+  const successful = results.filter(r => r.success);
+  if (successful.length > 0) {
+    console.log("\n✅ Successfully generated:");
+    successful.forEach(r => console.log(`   ${r.filename}`));
+  }
+
+  const failed = results.filter(r => !r.success);
+  if (failed.length > 0) {
+    console.log("\n❌ Failed models:");
+    failed.forEach(r => console.log(`   ${r.model}: ${r.error}`));
+  }
+}
+
+// CLI mode - direct command execution
+const command = process.argv[2];
+
+if (command === "--help" || command === "-h") {
+  console.log("Usage: bun run src/index.ts [model|batch]");
+  console.log("");
+  console.log("Examples:");
+  console.log("  bun run src/index.ts                          # Use default model (FLUX.1-dev)");
+  console.log("  bun run src/index.ts black-forest-labs/FLUX.1-kontext-pro  # Specific model");
+  console.log("  bun run src/index.ts batch                   # Run all supported FLUX models");
+  console.log("");
   console.log("Make sure to set TOGETHER_API_KEY environment variable");
   console.log("");
-  console.log(
-    "This script uses Together AI to transform room images with beautiful furniture and design."
-  );
-  console.log("Available models: black-forest-labs/FLUX.1-dev");
+  console.log("Supported models for batch:");
+  SUPPORTED_MODELS.forEach(model => console.log(`  - ${model}`));
   console.log("");
   console.log(`Fixed input image: ${INPUT_IMAGE_URL}`);
   process.exit(0);
 }
 
-if (!process.env.TOGETHER_API_KEY) {
-  console.error("Please set the TOGETHER_API_KEY environment variable");
-  console.error("You can get an API key from https://together.ai");
-  process.exit(1);
-}
-
-try {
-  const result = await generateImageToImage(model);
-  const outputFilename = `${slugifyModelName(model)}_transformed.jpg`;
-
-  // Extract base64 data and save as file
-  const parts = result.split(",");
-  if (parts.length !== 2 || !parts[1]) {
-    throw new Error("Invalid image data format");
+if (command === "batch") {
+  if (!process.env.TOGETHER_API_KEY) {
+    console.error("Please set the TOGETHER_API_KEY environment variable");
+    console.error("You can get an API key from https://together.ai");
+    process.exit(1);
   }
-  const base64Data = parts[1];
-  const outputBuffer = Buffer.from(base64Data, "base64");
-  writeFileSync(outputFilename, outputBuffer);
-  console.log(`📁 Saved to: ${outputFilename}`);
-} catch (error) {
-  console.error("❌ Error generating image:", error);
-  process.exit(1);
+
+  runBatch(SUPPORTED_MODELS).catch(error => {
+    console.error("❌ Batch processing failed:", error);
+    process.exit(1);
+  });
+} else {
+  // Single model mode
+  const model = command || "black-forest-labs/FLUX.1-dev";
+
+  if (!process.env.TOGETHER_API_KEY) {
+    console.error("Please set the TOGETHER_API_KEY environment variable");
+    console.error("You can get an API key from https://together.ai");
+    process.exit(1);
+  }
+
+  try {
+    const result = await generateImageToImage(model);
+    const outputFilename = `${slugifyModelName(model)}_transformed.jpg`;
+
+    // Extract base64 data and save as file
+    const parts = result.split(",");
+    if (parts.length !== 2 || !parts[1]) {
+      throw new Error("Invalid image data format");
+    }
+    const base64Data = parts[1];
+    const outputBuffer = Buffer.from(base64Data, "base64");
+    writeFileSync(outputFilename, outputBuffer);
+    console.log(`📁 Saved to: ${outputFilename}`);
+  } catch (error) {
+    console.error("❌ Error generating image:", error);
+    process.exit(1);
+  }
 }

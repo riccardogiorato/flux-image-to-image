@@ -46,21 +46,37 @@ Run transformations from the command line:
 bun run src/index.ts
 
 # Specify a different model
-bun run src/index.ts "black-forest-labs/FLUX.1-dev"
+bun run src/index.ts "black-forest-labs/FLUX.1-kontext-pro"
+
+# Run batch processing across all supported FLUX models
+bun run src/index.ts batch
 ```
 
 The input image is fixed to: `https://i.ibb.co/GQy3R6qx/cluttered-living-room-JPWJRX.jpg`
 
-Output files are automatically named based on the model name (e.g., `flux_1_dev_transformed.jpg`).
+Output files are automatically named based on the model name (e.g., `flux_1_kontext_pro_transformed.jpg`).
 
 ### Quick Test Commands
 
 ```bash
-# Test with FLUX.1-dev
+# Test individual models
 bun run test   # Uses FLUX.1-dev
 bun run flux1  # Uses FLUX.1-dev
-bun run flux2  # Uses FLUX.1-dev
+bun run flux2  # Uses FLUX.2-flex
+
+# Run batch processing across all supported FLUX models
+bun run batch  # Processes all FLUX models with image-to-image support (continues on failures)
 ```
+
+## Supported Models
+
+The batch command processes all FLUX models that support image-to-image:
+
+- ✅ `black-forest-labs/FLUX.1-kontext-dev` (working)
+- ✅ `black-forest-labs/FLUX.1-kontext-pro` (working)
+- ✅ `black-forest-labs/FLUX.1-kontext-max` (working)
+- ❌ `black-forest-labs/FLUX.2-pro` (server error)
+- ✅ `black-forest-labs/FLUX.2-flex` (working)
 
 ## License
 

@@ -8,6 +8,7 @@ A Bun-based CLI tool that uses Together AI's FLUX models to transform room image
 - 🎨 **High Quality**: 1024x1024 resolution outputs
 - 🔧 **Customizable**: Support for different FLUX models
 - ⚡ **Fast Processing**: Direct API integration with Together AI
+- 🚀 **Parallel Batch**: Process multiple models simultaneously for maximum speed
 
 ## Project Structure
 
@@ -64,18 +65,20 @@ bun run test   # Uses FLUX.1-dev
 bun run flux1  # Uses FLUX.1-dev
 bun run flux2  # Uses FLUX.2-flex
 
-# Run batch processing across all supported FLUX models
-bun run batch  # Processes all FLUX models with image-to-image support (continues on failures)
+# Run parallel batch processing across all supported FLUX models
+bun run batch  # Processes all FLUX models simultaneously for maximum speed
 ```
 
 ## Supported Models
 
 The batch command processes all FLUX models that support image-to-image:
 
-- ✅ `black-forest-labs/FLUX.1-kontext-dev` (working)
+- ⚠️ `black-forest-labs/FLUX.1-dev` (working but output is bad)
+- ⚠️ `black-forest-labs/FLUX.2-dev` (NOT working image_url)
+- ⚠️ `black-forest-labs/FLUX.1-kontext-dev` (working but ouput is similar but not as good as the other models)
 - ✅ `black-forest-labs/FLUX.1-kontext-pro` (working)
 - ✅ `black-forest-labs/FLUX.1-kontext-max` (working)
-- ❌ `black-forest-labs/FLUX.2-pro` (server error)
+- ✅ `black-forest-labs/FLUX.2-pro` (working)
 - ✅ `black-forest-labs/FLUX.2-flex` (working)
 
 ## License

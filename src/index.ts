@@ -5,6 +5,13 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
 });
 
+interface BatchResult {
+  model: string;
+  success: boolean;
+  filename?: string;
+  error?: string;
+}
+
 // Fixed input image URL
 const INPUT_IMAGE_URL =
   "https://i.ibb.co/GQy3R6qx/cluttered-living-room-JPWJRX.jpg";
@@ -44,23 +51,26 @@ async function generateImageToImage(model: string): Promise<string> {
 
 // FLUX models that support image-to-image
 const SUPPORTED_MODELS = [
+  "black-forest-labs/FLUX.1-dev",
+  "black-forest-labs/FLUX.2-dev",
   "black-forest-labs/FLUX.1-kontext-dev",
   "black-forest-labs/FLUX.1-kontext-pro",
   "black-forest-labs/FLUX.1-kontext-max",
   "black-forest-labs/FLUX.2-pro",
-  "black-forest-labs/FLUX.2-flex"
+  "black-forest-labs/FLUX.2-flex",
 ];
 
 async function runBatch(models: string[]) {
-  console.log(`🚀 Starting batch processing of ${models.length} FLUX models...`);
+  console.log(
+    `🚀 Starting parallel batch processing of ${models.length} FLUX models...`
+  );
   console.log(`Input image: ${INPUT_IMAGE_URL}`);
   console.log("");
 
-  const results = [];
-
-  for (const model of models) {
+  // Start all models in parallel
+  const promises = models.map(async (model, index): Promise<BatchResult> => {
+    console.log(`🔄 Starting ${model}...`);
     try {
-      console.log(`🔄 Processing ${model}...`);
       const result = await generateImageToImage(model);
       const outputFilename = `${slugifyModelName(model)}_transformed.jpg`;
 
@@ -73,28 +83,53 @@ async function runBatch(models: string[]) {
       const outputBuffer = Buffer.from(base64Data, "base64");
       writeFileSync(outputFilename, outputBuffer);
 
-      results.push({ model, success: true, filename: outputFilename });
       console.log(`✅ ${model} → ${outputFilename}`);
+      return { model, success: true, filename: outputFilename };
     } catch (error) {
-      console.log(`❌ ${model} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      results.push({ model, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      console.log(
+        `❌ ${model} failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+      return {
+        model,
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
-    console.log("");
-  }
+  });
 
-  console.log("📊 Batch processing complete!");
-  console.log(`Successful: ${results.filter(r => r.success).length}/${models.length}`);
+  // Wait for all promises to settle (either resolve or reject)
+  const results = await Promise.allSettled(promises);
 
-  const successful = results.filter(r => r.success);
+  // Process results - all promises should resolve since we catch errors internally
+  const processedResults = results.map((result) => {
+    if (result.status === "fulfilled") {
+      return result.value;
+    } else {
+      // This shouldn't happen since we catch errors in the promise, but just in case
+      console.log(`❌ Unexpected promise rejection`);
+      return { model: "unknown", success: false, error: "Unhandled error" };
+    }
+  });
+
+  console.log("\n📊 Batch processing complete!");
+  console.log(
+    `Successful: ${processedResults.filter((r) => r.success).length}/${
+      models.length
+    }`
+  );
+
+  const successful = processedResults.filter((r) => r.success && r.filename);
   if (successful.length > 0) {
     console.log("\n✅ Successfully generated:");
-    successful.forEach(r => console.log(`   ${r.filename}`));
+    successful.forEach((r) => console.log(`   ${r.filename}`));
   }
 
-  const failed = results.filter(r => !r.success);
+  const failed = processedResults.filter((r) => !r.success);
   if (failed.length > 0) {
     console.log("\n❌ Failed models:");
-    failed.forEach(r => console.log(`   ${r.model}: ${r.error}`));
+    failed.forEach((r) => console.log(`   ${r.model}: ${r.error}`));
   }
 }
 
@@ -105,14 +140,20 @@ if (command === "--help" || command === "-h") {
   console.log("Usage: bun run src/index.ts [model|batch]");
   console.log("");
   console.log("Examples:");
-  console.log("  bun run src/index.ts                          # Use default model (FLUX.1-dev)");
-  console.log("  bun run src/index.ts black-forest-labs/FLUX.1-kontext-pro  # Specific model");
-  console.log("  bun run src/index.ts batch                   # Run all supported FLUX models");
+  console.log(
+    "  bun run src/index.ts                          # Use default model (FLUX.1-dev)"
+  );
+  console.log(
+    "  bun run src/index.ts black-forest-labs/FLUX.1-kontext-pro  # Specific model"
+  );
+  console.log(
+    "  bun run src/index.ts batch                   # Run all supported FLUX models"
+  );
   console.log("");
   console.log("Make sure to set TOGETHER_API_KEY environment variable");
   console.log("");
   console.log("Supported models for batch:");
-  SUPPORTED_MODELS.forEach(model => console.log(`  - ${model}`));
+  SUPPORTED_MODELS.forEach((model) => console.log(`  - ${model}`));
   console.log("");
   console.log(`Fixed input image: ${INPUT_IMAGE_URL}`);
   process.exit(0);
@@ -125,7 +166,7 @@ if (command === "batch") {
     process.exit(1);
   }
 
-  runBatch(SUPPORTED_MODELS).catch(error => {
+  runBatch(SUPPORTED_MODELS).catch((error) => {
     console.error("❌ Batch processing failed:", error);
     process.exit(1);
   });

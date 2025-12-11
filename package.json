@@ -1,0 +1,20 @@
+{
+  "name": "flux-image-to-image",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun run src/index.ts \"black-forest-labs/FLUX.1-dev\"",
+    "flux1": "bun run src/index.ts \"black-forest-labs/FLUX.1-dev\"",
+    "flux2": "bun run src/index.ts \"black-forest-labs/FLUX.2-flex\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "together-ai": "^0.33.0"
+  }
+}

@@ -30,13 +30,21 @@ async function generateImageToImage(model: string): Promise<string> {
   console.log(`Generating image-to-image transformation with ${model}...`);
   console.log(`Input image: ${INPUT_IMAGE_URL}`);
 
+  const paramImage = model.includes("FLUX.2")
+    ? {
+        reference_images: [INPUT_IMAGE_URL],
+      }
+    : {
+        image_url: INPUT_IMAGE_URL,
+      };
+
   const response = await together.images.generate({
     model: model,
     prompt: prompt,
     width: 1024,
     height: 1024,
     response_format: "base64",
-    image_url: INPUT_IMAGE_URL,
+    ...paramImage,
   });
 
   if (response.data && response.data[0] && response.data[0].b64_json) {
